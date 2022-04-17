@@ -4,15 +4,14 @@
 
 int main()
 {
-    uint8_t test[1080 * 1080 * 3] = {0};
-    memset(test, 150, sizeof(test));
+    uint8_t test[1080U * 1080U * 3U /* RGB */];
+    memset(test, 150U, sizeof(test));
     amiss_img_st img = {
         .b = test,
         .blen = sizeof(test),
         .fmt = AMISS_IMG_FMT_PPM,
-        .h = 1080,
-        .w = 1080,
+        .h = 1080U,
+        .w = 1080U,
     };
-    amiss_img_save(&img, "test.ppm");
-    return 0;
+    return amiss_img_save(&img, "000_test.ppm");
 }
