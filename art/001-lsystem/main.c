@@ -5,12 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PROJ_NAME "001-lsystem"
+
 /* How the rewritten word should grow on overflow. */
 #define WLEN_SIZE_INIT 1024U
 #define WLEN_SIZE_REALLOC 1024U
 
 /* 0U for raster, 1U for vector. */
-#define RASTER_OR_VECTOR 0U
+#define RASTER_OR_VECTOR 1U
 
 /* Size of the image (it's a square). */
 #define IMG_SIZE 1000U
@@ -551,13 +553,13 @@ int main()
     };
 
 #if RASTER_OR_VECTOR == 1U
-    lsystem_gen(ls[0U], draw_params[0U], "001_lsystem_rule0.png");
-    lsystem_gen(ls[1U], draw_params[1U], "001_lsystem_rule1.png");
-    lsystem_gen(ls[2U], draw_params[2U], "001_lsystem_rule2.png");
+    lsystem_gen(ls[0U], draw_params[0U], PROJ_NAME "_rule0.png");
+    lsystem_gen(ls[1U], draw_params[1U], PROJ_NAME "_rule1.png");
+    lsystem_gen(ls[2U], draw_params[2U], PROJ_NAME "_rule2.png");
 #else
-    lsystem_gen(ls[0U], draw_params[0U], "001_lsystem_rule0.ppm");
-    lsystem_gen(ls[1U], draw_params[1U], "001_lsystem_rule1.ppm");
-    lsystem_gen(ls[2U], draw_params[2U], "001_lsystem_rule2.ppm");
+    lsystem_gen(ls[0U], draw_params[0U], PROJ_NAME "_rule0.ppm");
+    lsystem_gen(ls[1U], draw_params[1U], PROJ_NAME "_rule1.ppm");
+    lsystem_gen(ls[2U], draw_params[2U], PROJ_NAME "_rule2.ppm");
 #endif
 
     return EXIT_SUCCESS;
