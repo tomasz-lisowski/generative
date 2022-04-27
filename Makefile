@@ -1,5 +1,6 @@
 include lib/make-pal/pal.mak
 DIR_SRC:=src
+DIR_INCLUDE:=include
 DIR_BUILD:=build
 DIR_BUILD_LIB:=build-lib
 DIR_LIB:=lib
@@ -10,13 +11,14 @@ MAIN_NAME:=$(LIB_PREFIX)amiss
 MAIN_SRC:=$(wildcard $(DIR_SRC)/*.c)
 MAIN_OBJ:=$(MAIN_SRC:$(DIR_SRC)/%.c=$(DIR_BUILD)/%.o)
 MAIN_DEP:=$(MAIN_OBJ:%.o=%.d)
-MAIN_CC_FLAGS:=-g -W -Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-parameter \
-               -fPIC -Iinclude -Ibuild-lib/plutovg/include
+MAIN_CC_FLAGS:=-W -Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-parameter \
+               -fPIC -I$(DIR_INCLUDE) -I$(DIR_BUILD_LIB)/plutovg/include
 MAIN_AR_FLAGS:=-rsc
 
-all:
-	$(MAKE) -j all-conc
-all-conc: main
+all: all-lib main
+all-fast: main
+all-dbg: MAIN_CC_FLAGS+=-g -DDEBUG
+all-dbg: main
 all-lib: plutovg
 
 # Create static library.
@@ -30,9 +32,9 @@ plutovg: $(DIR_BUILD_LIB)
 	cd $(DIR_LIB)/plutovg/build && cmake -G "$(CMAKE_GENERATOR)" -DCMAKE_C_COMPILER=$(CC) -DCMAKE_MAKE_PROGRAM=$(MAKE) ..
 	cd $(DIR_LIB)/plutovg/build && $(MAKE)
 	$(call pal_mkdir,$(DIR_BUILD_LIB)/plutovg)
-	$(call pal_mkdir,$(DIR_BUILD_LIB)/plutovg/include)
+	$(call pal_mkdir,$(DIR_BUILD_LIB)/plutovg/$(DIR_INCLUDE))
 	$(call pal_cp,$(DIR_LIB)/plutovg/build/libplutovg.a,$(DIR_BUILD_LIB)/plutovg/$(LIB_PREFIX)plutovg.$(EXT_LIB_STATIC))
-	$(call pal_cpdir,$(DIR_LIB)/plutovg/include,$(DIR_BUILD_LIB)/plutovg/include)
+	$(call pal_cpdir,$(DIR_LIB)/plutovg/include,$(DIR_BUILD_LIB)/plutovg/$(DIR_INCLUDE))
 	$(call pal_rm,$(DIR_BUILD_LIB)/plutovg/include/CMakeLists.txt)
 
 # Compile source files to object files.
@@ -49,4 +51,4 @@ clean:
 	$(call pal_rmdir,$(DIR_BUILD_LIB))
 	$(call pal_rmdir,$(DIR_LIB)/plutovg/build)
 
-.PHONY: all all-conc all-lib main plutovg clean
+.PHONY: all all-fast all-dbg all-lib main plutovg clean

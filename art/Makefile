@@ -1,8 +1,9 @@
 include ../lib/make-pal/pal.mak
 DIR_BUILD:=build
+DIR_INCLUDE:=include
 CC:=gcc
-CC_FLAGS:=-g -W -Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-parameter \
-          -I../include -I../build-lib/plutovg/include -L../build-lib/plutovg -L../build \
+CC_FLAGS:=-W -Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-parameter -O2 \
+          -I../$(DIR_INCLUDE) -I../build-lib/plutovg/include -L../build-lib/plutovg -L../build \
 		  -lamiss -lm -lplutovg
 
 #######################################
@@ -11,9 +12,10 @@ ARTS:=000-test 001-lsystem
 001-lsystem_SRC:=main.c
 #######################################
 
-all:
-	$(MAKE) -j all-conc
-all-conc: $(DIR_BUILD) $(addprefix $(DIR_BUILD)/,$(foreach ART,$(ARTS),$(addsuffix .$(EXT_BIN),$(ART))))
+all: all-art
+all-dbg: CC_FLAGS+=-g -DDEBUG
+all-dbg: all-art
+all-art: $(DIR_BUILD) $(addprefix $(DIR_BUILD)/,$(foreach ART,$(ARTS),$(addsuffix .$(EXT_BIN),$(ART))))
 
 define ART_TEMPLATE
 $(1)_OBJ:=$$(addprefix $$(DIR_BUILD)/$(1)/, $$($(1)_SRC:.c=.o))
@@ -37,4 +39,4 @@ $(DIR_BUILD) $(foreach ART,$(ARTS),$(DIR_BUILD)/$(ART)):
 clean:
 	$(call pal_rmdir,$(DIR_BUILD))
 
-.PHONY: all all-conc clean
+.PHONY: all all-dbg all-art clean
