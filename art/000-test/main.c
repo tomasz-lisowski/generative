@@ -13,5 +13,5 @@ int main()
         .h = 1080U,
         .w = 1080U,
     };
-    return amiss_img_save(&img, "000_test.ppm");
+    return amiss_img_save(&img, "000-test.ppm");
 }

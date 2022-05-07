@@ -36,6 +36,12 @@ typedef struct gradient_st
     color_st *colors;
 } gradient_st;
 
+void amiss_draw_px_set(amiss_img_st const *const img, color_st const color,
+                       uint32_t const x, uint32_t const y);
+
+void amiss_draw_px_get(amiss_img_st const *const img, color_st *const color,
+                       uint32_t const x, uint32_t const y);
+
 uint32_t amiss_draw_line(amiss_img_st const *const img, color_st const color,
                          double_t const thickness, bool const antialias,
                          vec2u32_st const start, vec2u32_st const end);

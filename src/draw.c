@@ -1,30 +1,6 @@
 #include "amiss.h"
 #include <stdlib.h>
 
-static void pixel_set(amiss_img_st const *const img, color_st const color,
-                      uint32_t const x, uint32_t const y)
-{
-    uint8_t const depth = amiss_img_depth(img);
-    for (uint8_t depth_idx = 0; depth_idx < depth; ++depth_idx)
-    {
-        img->b[amiss_img_xy2idx(img, depth, x, y) + depth_idx] =
-            color.a[depth_idx];
-    }
-}
-
-__attribute__((unused)) static void pixel_get(amiss_img_st const *const img,
-                                              color_st *const color,
-                                              uint32_t const x,
-                                              uint32_t const y)
-{
-    uint8_t const depth = amiss_img_depth(img);
-    for (uint8_t depth_idx = 0; depth_idx < depth; ++depth_idx)
-    {
-        (*color).a[depth_idx] =
-            img->b[amiss_img_xy2idx(img, depth, x, y) + depth_idx];
-    }
-}
-
 __attribute__((unused)) static void color_antialias(
     amiss_img_st const *const img, color_st *const color_aa,
     color_st const color, color_st const color_bg, double_t const antialias)
@@ -69,7 +45,7 @@ static uint32_t bresenham_thin(amiss_img_st const *const img,
 
     for (;;)
     {
-        pixel_set(img, color, x, y);
+        amiss_draw_px_set(img, color, x, y);
         if (x == end.x && y == end.y)
         {
             break;
@@ -98,6 +74,38 @@ static uint32_t bresenham_thin(amiss_img_st const *const img,
     return length;
 
     return length;
+}
+
+inline void amiss_draw_px_set(amiss_img_st const *const img,
+                              color_st const color, uint32_t const x,
+                              uint32_t const y)
+{
+    if (x >= img->w || y >= img->h)
+    {
+        return; /* Outside of the image. */
+    }
+    uint8_t const depth = amiss_img_depth(img);
+    for (uint8_t depth_idx = 0; depth_idx < depth; ++depth_idx)
+    {
+        img->b[amiss_img_xy2idx(img, depth, x, y) + depth_idx] =
+            color.a[depth_idx];
+    }
+}
+
+inline void amiss_draw_px_get(amiss_img_st const *const img,
+                              color_st *const color, uint32_t const x,
+                              uint32_t const y)
+{
+    if (x >= img->w || y >= img->h)
+    {
+        return; /* Outside of the image. */
+    }
+    uint8_t const depth = amiss_img_depth(img);
+    for (uint8_t depth_idx = 0; depth_idx < depth; ++depth_idx)
+    {
+        (*color).a[depth_idx] =
+            img->b[amiss_img_xy2idx(img, depth, x, y) + depth_idx];
+    }
 }
 
 uint32_t amiss_draw_line(amiss_img_st const *const img, color_st const color,
@@ -131,7 +139,7 @@ void amiss_draw_bg_gradient(amiss_img_st const *const img,
     {
         for (uint32_t x_seg = 0U; x_seg < img->w; ++x_seg)
         {
-            pixel_set(img, gradient.colors[0U], x_seg, y_seg);
+            amiss_draw_px_set(img, gradient.colors[0U], x_seg, y_seg);
         }
     }
 
@@ -143,7 +151,8 @@ void amiss_draw_bg_gradient(amiss_img_st const *const img,
     {
         for (uint32_t x_seg = 0U; x_seg < img->w; ++x_seg)
         {
-            pixel_set(img, gradient.colors[gradient.count - 1U], x_seg, y_seg);
+            amiss_draw_px_set(img, gradient.colors[gradient.count - 1U], x_seg,
+                              y_seg);
         }
     }
 
@@ -188,7 +197,7 @@ void amiss_draw_bg_gradient(amiss_img_st const *const img,
                 seg_idx, seg_idx + 1, seg_start, seg_len, y_seg, frac_seg);
         for (uint32_t x_seg = 0U; x_seg < img->w; ++x_seg)
         {
-            pixel_set(img, color, x_seg, y_seg);
+            amiss_draw_px_set(img, color, x_seg, y_seg);
         }
     }
 }

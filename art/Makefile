@@ -7,9 +7,10 @@ CC_FLAGS:=-W -Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-
 		  -lamiss -lm -lplutovg
 
 #######################################
-ARTS:=000-test 001-lsystem
+ARTS:=000-test 001-lsystem 002-hitomezashi
 000-test_SRC:=main.c
 001-lsystem_SRC:=main.c
+002-hitomezashi_SRC:=main.c
 #######################################
 
 all: all-art
