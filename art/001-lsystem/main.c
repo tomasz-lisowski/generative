@@ -27,14 +27,15 @@ typedef struct lsystem_draw_params_s
     double_t const line_len;
     uint32_t const x_start;
     uint32_t const y_start;
+
+    color_st const color_branch;
+    color_st const color_gradient[3];
 } lsystem_draw_params_st;
 
 typedef struct lsystem_prule_s
 {
     char const *const l;
     char const *const r;
-    uint32_t const llen;
-    uint32_t const rlen;
 } lsystem_prule_st;
 
 typedef struct lsystem_cword_s
@@ -77,8 +78,9 @@ typedef struct lsystem_s
 bool lsystem_prule_check(lsystem_prule_st const prule,
                          lsystem_vword_st *const word, uint32_t const word_idx)
 {
-    if (word_idx + prule.llen <= word->wlen &&
-        memcmp(&word->w[word_idx], prule.l, prule.llen) == 0)
+    uint32_t const llen = (uint32_t)strlen(prule.l);
+    if (word_idx + llen <= word->wlen &&
+        memcmp(&word->w[word_idx], prule.l, llen) == 0)
     {
         return true;
     }
@@ -108,6 +110,9 @@ uint8_t lsystem_rewrite(lsystem_st const grammar, lsystem_vword_st *const word)
         for (uint32_t prule_idx = 0U; prule_idx < grammar.pr_count; ++prule_idx)
         {
             lsystem_prule_st const prule = (*grammar.pr)[prule_idx];
+            uint32_t const llen = (uint32_t)strlen(prule.l);
+            uint32_t const rlen = (uint32_t)strlen(prule.r);
+
             if (lsystem_prule_check(prule, word, word_idx) == true)
             {
                 log_dbg("RWR",
@@ -119,12 +124,11 @@ uint8_t lsystem_rewrite(lsystem_st const grammar, lsystem_vword_st *const word)
                         "%.*s"
                         " to...\n",
                         // clang-format on
-                        prule.llen, prule.l, prule.rlen, prule.r, word_idx,
-                        &word->w[0U], prule.llen, &word->w[word_idx],
-                        word->wlen - word_idx - prule.llen,
-                        &word->w[word_idx + prule.llen]);
+                        llen, prule.l, rlen, prule.r, word_idx, &word->w[0U],
+                        llen, &word->w[word_idx], word->wlen - word_idx - llen,
+                        &word->w[word_idx + llen]);
 
-                int64_t const wlen_delta = prule.rlen - prule.llen;
+                int64_t const wlen_delta = rlen - llen;
                 /**
                  * Safe cast because it is not possible for word length to
                  * become negative here.
@@ -162,24 +166,24 @@ uint8_t lsystem_rewrite(lsystem_st const grammar, lsystem_vword_st *const word)
                  */
                 if (wlen_delta != 0)
                 {
-                    memmove(&word->w[word_idx + (prule.rlen - prule.llen) + 1U],
-                            &word->w[word_idx + prule.llen],
-                            word->wlen - word_idx - prule.llen);
+                    memmove(&word->w[word_idx + (rlen - llen) + 1U],
+                            &word->w[word_idx + llen],
+                            word->wlen - word_idx - llen);
                 }
 
                 /**
                  * Write RHS of production rule where LHS is located in the
                  * word.
                  */
-                if (prule.rlen > 0)
+                if (rlen > 0)
                 {
-                    memcpy(&word->w[word_idx], prule.r, prule.rlen);
+                    memcpy(&word->w[word_idx], prule.r, rlen);
                 }
 
                 log_dbg("RWR", "%.*s" CLR_TXT(CLR_BLU, "%.*s") "%.*s\n",
-                        word_idx, &word->w[0U], prule.rlen, &word->w[word_idx],
-                        word->wlen - word_idx - prule.rlen,
-                        &word->w[word_idx + prule.rlen]);
+                        word_idx, &word->w[0U], rlen, &word->w[word_idx],
+                        word->wlen - word_idx - rlen,
+                        &word->w[word_idx + rlen]);
 
                 int64_t const word_idx_new = word_idx + wlen_delta;
                 if (word_idx_new < 0 || word_idx_new > UINT32_MAX)
@@ -220,7 +224,6 @@ uint8_t lsystem_draw(lsystem_vword_st const word,
 #endif
 )
 {
-    color_st const color_branch = {.a = {150U, 166U, 50U}};
     uint32_t const stack_size = 1024U;
     double_t const line_width = draw_params.line_width_min;
     double_t const line_len = draw_params.line_len;
@@ -262,15 +265,16 @@ uint8_t lsystem_draw(lsystem_vword_st const word,
 #if RASTER_OR_VECTOR == 1U
             plutovg_move_to(pluto, start.x, start.y);
             plutovg_line_to(pluto, end.x, end.y);
-            plutovg_set_source_rgb(pluto, color_branch.r / 255.0,
-                                   color_branch.g / 255.0,
-                                   color_branch.b / 255.0);
+            plutovg_set_source_rgb(pluto, draw_params.color_branch.r / 255.0,
+                                   draw_params.color_branch.g / 255.0,
+                                   draw_params.color_branch.b / 255.0);
             plutovg_set_line_width(pluto, width_delta_stack[sp] > line_width
                                               ? width_delta_stack[sp]
                                               : line_width);
             plutovg_stroke(pluto);
 #else
-            amiss_draw_line(&img, color_branch, line_width, false, start, end);
+            amiss_draw_line(&img, draw_params.color_branch, line_width, false,
+                            start, end);
 #endif
             width_delta_stack[sp] -= draw_params.line_width_delta;
             pos_stack[sp].x = end.x;
@@ -341,11 +345,6 @@ uint8_t lsystem_gen(lsystem_st const ls,
 {
     /* Gradient details. */
     double_t stops[] = {0.0, 0.5, 1.0};
-    color_st colors[] = {
-        {.a = {247U, 248U, 239U}},
-        {.a = {213U, 219U, 173U}},
-        {.a = {225U, 230U, 196U}},
-    };
 
 #if RASTER_OR_VECTOR == 1U
     plutovg_surface_t *const pluto_surface =
@@ -359,8 +358,10 @@ uint8_t lsystem_gen(lsystem_st const ls,
          ++stop_idx)
     {
         plutovg_gradient_add_stop_rgb(
-            gradient, stops[stop_idx], colors[stop_idx].r / 255.0,
-            colors[stop_idx].g / 255.0, colors[stop_idx].b / 255.0);
+            gradient, stops[stop_idx],
+            draw_params.color_gradient[stop_idx].r / 255.0,
+            draw_params.color_gradient[stop_idx].g / 255.0,
+            draw_params.color_gradient[stop_idx].b / 255.0);
     }
     plutovg_rect(pluto, 0U, 0U, IMG_SIZE, IMG_SIZE);
     plutovg_set_source_gradient(pluto, gradient);
@@ -377,7 +378,8 @@ uint8_t lsystem_gen(lsystem_st const ls,
     };
 
     /* Add background to image. */
-    gradient_st gradient = {.count = 3U, .colors = colors, .stops = stops};
+    gradient_st gradient = {
+        .count = 3U, .colors = draw_params.color_gradient, .stops = stops};
     amiss_draw_bg_gradient(&img, gradient);
 #endif
 
@@ -444,6 +446,13 @@ int main()
             .line_len = 2.4,
             .x_start = 520U,
             .y_start = IMG_SIZE - 1U,
+            .color_branch = {.a = {150U, 166U, 50U}},
+            .color_gradient =
+                {
+                    {.a = {247U, 248U, 239U}},
+                    {.a = {213U, 219U, 173U}},
+                    {.a = {225U, 230U, 196U}},
+                },
         },
         {
             .angle_delta = 24.5,
@@ -454,6 +463,13 @@ int main()
             .line_len = 8.0,
             .x_start = 580U,
             .y_start = IMG_SIZE - 1U,
+            .color_branch = {.a = {150U, 166U, 50U}},
+            .color_gradient =
+                {
+                    {.a = {247U, 248U, 239U}},
+                    {.a = {213U, 219U, 173U}},
+                    {.a = {225U, 230U, 196U}},
+                },
         },
         {
             .angle_delta = 20.0,
@@ -464,43 +480,81 @@ int main()
             .line_len = 7.0,
             .x_start = 460U,
             .y_start = IMG_SIZE - 1U,
+            .color_branch = {.a = {150U, 166U, 50U}},
+            .color_gradient =
+                {
+                    {.a = {247U, 248U, 239U}},
+                    {.a = {213U, 219U, 173U}},
+                    {.a = {225U, 230U, 196U}},
+                },
+        },
+        {
+            .angle_delta = 20.0,
+            .angle_start = 0.0,
+            .line_width_delta = 0.1,
+            .line_width_start = 2.0,
+            .line_width_min = 1.0,
+            .line_len = 25.0,
+            .x_start = IMG_SIZE / 2U,
+            .y_start = IMG_SIZE - 1U,
+            // .color_branch = {.a = {0x33, 0x53, 0x92}},
+            .color_branch = {.a = {0x8E, 0xA7, 0xD8}},
+
+            .color_gradient =
+                {
+                    {.a = {4U, 6U, 11U}},
+                    {.a = {4U, 6U, 11U}},
+                    {.a = {22U, 36U, 63U}},
+                },
         },
     };
-    lsystem_prule_st const prule[][2U] = {
+    lsystem_prule_st const prule[][5U] = {
         {
             {
                 .l = "X",
                 .r = "F+[[X]-X]-F[-FX]+X",
-                .llen = 1U,
-                .rlen = 18U,
             },
             {
                 .l = "F",
                 .r = "FF",
-                .llen = 1U,
-                .rlen = 2U,
             },
         },
         {
             {
                 .l = "F",
                 .r = "FF-[-F+F+F]+[+F-F-F]",
-                .llen = 1U,
-                .rlen = 20U,
             },
         },
         {
             {
                 .l = "X",
                 .r = "F[+X]F[-X]+X",
-                .llen = 1U,
-                .rlen = 12U,
             },
             {
                 .l = "F",
                 .r = "FF",
-                .llen = 1U,
-                .rlen = 2U,
+            },
+        },
+        {
+            {
+                .l = "V",
+                .r = "[+++W][---W]YV",
+            },
+            {
+                .l = "W",
+                .r = "+X[-W]Z",
+            },
+            {
+                .l = "X",
+                .r = "-W[+X]Z",
+            },
+            {
+                .l = "Y",
+                .r = "YZ",
+            },
+            {
+                .l = "Z",
+                .r = "[-FFF][+FFF]F",
             },
         },
     };
@@ -550,16 +604,33 @@ int main()
             .pr_count = 2U,
             .pr = &prule[2U],
         },
+        {
+            .alph =
+                {
+                    .w = "FVWXYZ+-[]",
+                    .wlen = 6U,
+                },
+            .axiom =
+                {
+                    .w = "VZFFF",
+                    .wlen = 5U,
+                },
+            .iters = 7U,
+            .pr_count = 5U,
+            .pr = &prule[3U],
+        },
     };
 
 #if RASTER_OR_VECTOR == 1U
     lsystem_gen(ls[0U], draw_params[0U], PROJ_NAME "_rule0.png");
     lsystem_gen(ls[1U], draw_params[1U], PROJ_NAME "_rule1.png");
     lsystem_gen(ls[2U], draw_params[2U], PROJ_NAME "_rule2.png");
+    lsystem_gen(ls[3U], draw_params[3U], PROJ_NAME "_rule3.png");
 #else
     lsystem_gen(ls[0U], draw_params[0U], PROJ_NAME "_rule0.ppm");
     lsystem_gen(ls[1U], draw_params[1U], PROJ_NAME "_rule1.ppm");
     lsystem_gen(ls[2U], draw_params[2U], PROJ_NAME "_rule2.ppm");
+    lsystem_gen(ls[3U], draw_params[3U], PROJ_NAME "_rule3.ppm");
 #endif
 
     return EXIT_SUCCESS;
